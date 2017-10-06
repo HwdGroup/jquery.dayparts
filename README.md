@@ -25,7 +25,7 @@ $.fn.dayparts.defaults = {
     days: {0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday'},
     weekStartsOn: 0,
     use24HFormat: true,
-    change0Hour: true, /* Now Works */
+    change0Hour: true,
     show2DigitsHour: false, /* Show hour as hh:mm */
     showPresets: true,
     presets: [
