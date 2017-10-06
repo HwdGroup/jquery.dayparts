@@ -21,9 +21,11 @@
 		var $el = $(this);
 
 		var dataChange = function(pointA, pointB, dragging) {
-			toggleGrid(pointA, pointB, $table, dragging);
-			// Trigger a catchable event other stuff can listen to
-			if (!dragging) $el.trigger('daypartsUpdate');
+			if (!settings.disabled) {
+				toggleGrid(pointA, pointB, $table, dragging);
+				// Trigger a catchable event other stuff can listen to
+				if (!dragging) $el.trigger('daypartsUpdate');
+			}
 		};
 
 		var settings = $.extend({}, $.fn.dayparts.defaults, options);
@@ -34,16 +36,25 @@
 
 		var $table = $('<table />').addClass('dayparts table');
 
+		var minTwoDigits = function (n) {
+			return (n < 10 ? '0' : '') + n;
+		};
+
 		var hours = {};
 		for (var i=0; i<24; i++){
 			var thishour = i;
 			if (!settings.use24HFormat) {
 				if (thishour > 12) thishour -= 12;
-				if (thishour == 0) thishour = 12;
+				if (settings.change0Hour && thishour === 0) thishour = 12;
 			} else {
-				if (settings.change0Hour && thishour == 0) thishour = 24;
+				if (settings.change0Hour && thishour === 0) thishour = 24;
 			}
-			hours[i] = thishour;
+
+			if (settings.show2DigitsHour) {
+				hours[i] = minTwoDigits(thishour);
+			} else {
+				hours[i] = thishour;
+			}
 		}
 
 		var $thead = $("<thead />");
@@ -51,12 +62,12 @@
 		var presetLoader = function(preset) {
 			// Blank out the whole grid
 			$table.find('.dayparts-cell').data('state', 0)
-				.removeClass('hour-active').addClass('hour-inactive');
+			.removeClass('hour-active').addClass('hour-inactive');
 
 			$.each(preset.days, function(index, day) {
 				$.each(preset.hours, function(index2, hour) {
 					$table.find('td.day-' + day + '.hour-' + hour)
-						.data('state', 1).addClass('hour-active').removeClass('hour-inactive');
+					.data('state', 1).addClass('hour-active').removeClass('hour-inactive');
 				});
 			});
 
@@ -73,11 +84,20 @@
 				if ($(this).find('option:selected').data('preset')) {
 					presetLoader($(this).find('option:selected').data('preset'));
 				}
-			});
+			}).addClass("form-control");
 
 			$select.append($("<option />")
 				.addClass('default-option')
 				.html(settings.i18nfunc(settings.labels.choosePreset)));
+
+			var val = [];
+			$.each(value, function(index, v) {
+				if (!isNaN(v.day) && isFinite(v.day) && !isNaN(v.hour) && isFinite(v.hour)) {
+					val.push(v);
+				}
+			});
+
+			val = JSON.stringify(val);
 
 			$.each(settings.presets, function(index, preset) {
 				$select.append(
@@ -88,24 +108,39 @@
 				);
 
 				var data = [];
-				$.each(preset.days, function(day) {
+				$.each(preset.days, function(index, day) {
 					var row = [];
-					$.each(preset.hours, function(hour){ row.push({day:day, hour:hour}) });
+					$.each(preset.hours, function(index2, hour){ row.push({day: day, hour: hour}) });
 					$.merge(data, row);
 				});
 
-				if (JSON.stringify(value) == JSON.stringify(data)) {
+				if (val == JSON.stringify(data)) {
 					$select.find('option').last().prop('selected', true);
 				};
 
 			});
+
+			if (settings.disabled){
+				$select.prop('disabled', true);
+			}
+
+			var $presetsSubtitle = $("<span />").addClass('cell-label presetsSubtitle-label').html(
+				settings.i18nfunc(settings.labels.presetsSubtitle)
+			);
+
+			//Presets subtitle before select
+			$td.append($presetsSubtitle);
+
 			$td.append($select);
 
 			var $label = $("<td />").addClass('cell-label presets-label').html(
 				settings.i18nfunc(settings.labels.presets)
 			);
 			var $tr = $("<tr />");
+
+			//Presets title before subtitle and select
 			$tr.append($label).append($td);
+
 			$thead.append($tr);
 
 		}
@@ -280,6 +315,7 @@
 	};
 
 	$.fn.dayparts.defaults = {
+		disabled: false,
 		i18nfunc: function(input){ return input; },
 		days: {0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday'},
 		weekStartsOn: 0,
@@ -298,6 +334,7 @@
 			am: 'AM',
 			pm: 'PM',
 			presets: 'Presets',
+			presetsSubtitle: '',
 			choosePreset: 'Select a Preset'
 		},
 		data: []
